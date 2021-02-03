@@ -53,7 +53,7 @@ fn router2() -> Router<Body, Error> {
             println!("Router2 Data: {:?}", req.data::<&str>());
             println!("Router2 Data: {:?}", req.data::<State>().map(|s| s.0));
             println!("Router2 Data: {:?}", req.data::<u32>());
-            Ok(Response::new(Body::from("Hello world!")))
+            Ok::<_, Error>(Response::new(Body::from("Hello world!")))
         })
         .build()
         .unwrap()
@@ -66,7 +66,7 @@ fn router3() -> Router<Body, Error> {
             println!("Router3 Data: {:?}", req.data::<&str>());
             println!("Router3 Data: {:?}", req.data::<State>().map(|s| s.0));
             println!("Router3 Data: {:?}", req.data::<u32>());
-            Ok(Response::new(Body::from("Hello world!")))
+            Ok::<_, Error>(Response::new(Body::from("Hello world!")))
         })
         .build()
         .unwrap()

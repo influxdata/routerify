@@ -6,6 +6,7 @@ use regex::Regex;
 use std::fmt::{self, Debug, Formatter};
 use std::future::Future;
 use std::pin::Pin;
+use futures_util::TryFutureExt;
 
 type HandlerWithoutInfo<B, E> = Box<dyn FnMut(Response<B>) -> HandlerWithoutInfoReturn<B, E> + Send + Sync + 'static>;
 type HandlerWithoutInfoReturn<B, E> = Box<dyn Future<Output = Result<Response<B>, E>> + Send + 'static>;
@@ -63,20 +64,21 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     ///
     /// # fn run() -> Router<Body, Infallible> {
     /// let router = Router::builder()
-    ///      .middleware(Middleware::Post(PostMiddleware::new("/abc", |res| async move { /* Do some operations */ Ok(res) }).unwrap()))
+    ///      .middleware(Middleware::Post(PostMiddleware::new("/abc", |res| async move { /* Do some operations */ Ok::<_, Infallible>(res) }).unwrap()))
     ///      .build()
     ///      .unwrap();
     /// # router
     /// # }
     /// # run();
     /// ```
-    pub fn new<P, H, R>(path: P, mut handler: H) -> crate::Result<PostMiddleware<B, E>>
+    pub fn new<P, H, R, EF>(path: P, mut handler: H) -> crate::Result<PostMiddleware<B, E>>
     where
         P: Into<String>,
         H: FnMut(Response<B>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
-        let handler: HandlerWithoutInfo<B, E> = Box::new(move |res: Response<B>| Box::new(handler(res)));
+        let handler: HandlerWithoutInfo<B, E> = Box::new(move |res: Response<B>| Box::new(handler(res).err_into()));
         PostMiddleware::new_with_boxed_handler(path, Handler::WithoutInfo(handler))
     }
 
@@ -107,14 +109,15 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     /// # }
     /// # run();
     /// ```
-    pub fn new_with_info<P, H, R>(path: P, mut handler: H) -> crate::Result<PostMiddleware<B, E>>
+    pub fn new_with_info<P, H, R, EF>(path: P, mut handler: H) -> crate::Result<PostMiddleware<B, E>>
     where
         P: Into<String>,
         H: FnMut(Response<B>, RequestInfo) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         let handler: HandlerWithInfo<B, E> =
-            Box::new(move |res: Response<B>, req_info: RequestInfo| Box::new(handler(res, req_info)));
+            Box::new(move |res: Response<B>, req_info: RequestInfo| Box::new(handler(res, req_info).err_into()));
         PostMiddleware::new_with_boxed_handler(path, Handler::WithInfo(handler))
     }
 

@@ -125,11 +125,12 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # }
     /// # run();
     /// ```
-    pub fn get<P, H, R>(self, path: P, handler: H) -> Self
+    pub fn get<P, H, R, EF>(self, path: P, handler: H) -> Self
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         self.add(path, vec![Method::GET], handler)
     }
@@ -155,11 +156,12 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # }
     /// # run();
     /// ```
-    pub fn get_or_head<P, H, R>(self, path: P, handler: H) -> Self
+    pub fn get_or_head<P, H, R, EF>(self, path: P, handler: H) -> Self
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         self.add(path, vec![Method::GET, Method::HEAD], handler)
     }
@@ -185,11 +187,12 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # }
     /// # run();
     /// ```
-    pub fn post<P, H, R>(self, path: P, handler: H) -> Self
+    pub fn post<P, H, R, EF>(self, path: P, handler: H) -> Self
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         self.add(path, vec![Method::POST], handler)
     }
@@ -215,11 +218,12 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # }
     /// # run();
     /// ```
-    pub fn put<P, H, R>(self, path: P, handler: H) -> Self
+    pub fn put<P, H, R, EF>(self, path: P, handler: H) -> Self
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>,
     {
         self.add(path, vec![Method::PUT], handler)
     }
@@ -245,11 +249,12 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # }
     /// # run();
     /// ```
-    pub fn delete<P, H, R>(self, path: P, handler: H) -> Self
+    pub fn delete<P, H, R, EF>(self, path: P, handler: H) -> Self
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         self.add(path, vec![Method::DELETE], handler)
     }
@@ -275,11 +280,12 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # }
     /// # run();
     /// ```
-    pub fn head<P, H, R>(self, path: P, handler: H) -> Self
+    pub fn head<P, H, R, EF>(self, path: P, handler: H) -> Self
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         self.add(path, vec![Method::HEAD], handler)
     }
@@ -305,11 +311,12 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # }
     /// # run();
     /// ```
-    pub fn trace<P, H, R>(self, path: P, handler: H) -> Self
+    pub fn trace<P, H, R, EF>(self, path: P, handler: H) -> Self
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         self.add(path, vec![Method::TRACE], handler)
     }
@@ -335,11 +342,12 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # }
     /// # run();
     /// ```
-    pub fn connect<P, H, R>(self, path: P, handler: H) -> Self
+    pub fn connect<P, H, R, EF>(self, path: P, handler: H) -> Self
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         self.add(path, vec![Method::CONNECT], handler)
     }
@@ -365,11 +373,12 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # }
     /// # run();
     /// ```
-    pub fn patch<P, H, R>(self, path: P, handler: H) -> Self
+    pub fn patch<P, H, R, EF>(self, path: P, handler: H) -> Self
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         self.add(path, vec![Method::PATCH], handler)
     }
@@ -395,11 +404,12 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # }
     /// # run();
     /// ```
-    pub fn options<P, H, R>(self, path: P, handler: H) -> Self
+    pub fn options<P, H, R, EF>(self, path: P, handler: H) -> Self
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         self.add(path, vec![Method::OPTIONS], handler)
     }
@@ -436,10 +446,11 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # }
     /// # run();
     /// ```
-    pub fn any<H, R>(self, handler: H) -> Self
+    pub fn any<H, R, EF>(self, handler: H) -> Self
     where
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         self.add("/*", constants::ALL_POSSIBLE_HTTP_METHODS.to_vec(), handler)
     }
@@ -466,11 +477,12 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # }
     /// # run();
     /// ```
-    pub fn any_method<H, R, P>(self, path: P, handler: H) -> Self
+    pub fn any_method<H, R, P, EF>(self, path: P, handler: H) -> Self
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         self.add(path, constants::ALL_POSSIBLE_HTTP_METHODS.to_vec(), handler)
     }
@@ -496,11 +508,12 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # }
     /// # run();
     /// ```
-    pub fn add<P, H, R>(self, path: P, methods: Vec<Method>, handler: H) -> Self
+    pub fn add<P, H, R, EF>(self, path: P, methods: Vec<Method>, handler: H) -> Self
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         self.and_then(move |mut inner| {
             let mut path = path.into();
@@ -527,17 +540,18 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// mod api {
     ///     use routerify::Router;
     ///     use hyper::{Response, Request, Body};
+    ///     use std::convert::Infallible;
     ///
-    ///     pub fn router() -> Router<Body, hyper::Error> {
+    ///     pub fn router() -> Router<Body, Infallible> {
     ///         Router::builder()
-    ///          .get("/users", |req| async move { Ok(Response::new(Body::from("User list"))) })
-    ///          .get("/books", |req| async move { Ok(Response::new(Body::from("Book list"))) })
+    ///          .get("/users", |req| async move { Ok::<_, Infallible>(Response::new(Body::from("User list"))) })
+    ///          .get("/books", |req| async move { Ok::<_, Infallible>(Response::new(Body::from("Book list"))) })
     ///          .build()
     ///          .unwrap()
     ///     }
     /// }
     ///
-    /// # fn run() -> Router<Body, hyper::Error> {
+    /// # fn run() -> Router<Body, std::convert::Infallible> {
     /// let router = Router::builder()
     ///     // Now, mount the api router at `/api` path.
     ///     .scope("/api", api::router())
@@ -643,9 +657,9 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder
     /// # fn run() -> Router<Body, Infallible> {
     /// let router = Router::builder()
     ///      // Create and attach a pre middleware.
-    ///      .middleware(Middleware::pre(|req| async move { /* Do some operations */ Ok(req) }))
+    ///      .middleware(Middleware::pre(|req| async move { /* Do some operations */ Ok::<_, Infallible>(req) }))
     ///      // Create and attach a post middleware.
-    ///      .middleware(Middleware::post(|res| async move { /* Do some operations */ Ok(res) }))
+    ///      .middleware(Middleware::post(|res| async move { /* Do some operations */ Ok::<_, Infallible>(res) }))
     ///      .build()
     ///      .unwrap();
     /// # router

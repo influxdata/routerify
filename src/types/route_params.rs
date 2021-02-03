@@ -33,7 +33,7 @@ impl RouteParams {
     /// use routerify::{Router, RouteParams};
     /// use routerify::ext::RequestExt;
     /// use hyper::{Response, Body};
-    /// # use std::convert::Infallible;
+    /// use std::convert::Infallible;
     ///
     /// # fn run() -> Router<Body, Infallible> {
     /// let router = Router::builder()
@@ -43,7 +43,7 @@ impl RouteParams {
     ///         let user_name = params.get("userName").unwrap();
     ///         let book_name = params.get("bookName").unwrap();
     ///
-    ///         Ok(Response::new(Body::from(format!("Username: {}, Book Name: {}", user_name, book_name))))
+    ///         Ok::<_, Infallible>(Response::new(Body::from(format!("Username: {}, Book Name: {}", user_name, book_name))))
     ///      })
     ///      .build()
     ///      .unwrap();
@@ -63,7 +63,7 @@ impl RouteParams {
     /// use routerify::{Router, RouteParams};
     /// use routerify::ext::RequestExt;
     /// use hyper::{Response, Body};
-    /// # use std::convert::Infallible;
+    /// use std::convert::Infallible;
     ///
     /// # fn run() -> Router<Body, Infallible> {
     /// let router = Router::builder()
@@ -71,9 +71,9 @@ impl RouteParams {
     ///         let params: &RouteParams = req.params();
     ///         
     ///         if params.has("userName") {
-    ///             Ok(Response::new(Body::from(params.get("userName").unwrap().to_string())))
+    ///             Ok::<_, Infallible>(Response::new(Body::from(params.get("userName").unwrap().to_string())))
     ///         } else {
-    ///             Ok(Response::new(Body::from("username is not provided")))
+    ///             Ok::<_, Infallible>(Response::new(Body::from("username is not provided")))
     ///         }
     ///      })
     ///      .build()

@@ -40,17 +40,18 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     ///
     /// # fn run() -> Router<Body, Infallible> {
     /// let router = Router::builder()
-    ///      .middleware(Middleware::pre(|req| async move { /* Do some operations */ Ok(req) }))
+    ///      .middleware(Middleware::pre(|req| async move { /* Do some operations */ Ok::<_, Infallible>(req) }))
     ///      .build()
     ///      .unwrap();
     /// # router
     /// # }
     /// # run();
     /// ```
-    pub fn pre<H, R>(handler: H) -> Middleware<B, E>
+    pub fn pre<H, R, EF>(handler: H) -> Middleware<B, E>
     where
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Request<hyper::Body>, E>> + Send + 'static,
+        R: Future<Output = Result<Request<hyper::Body>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         Middleware::pre_with_path("/*", handler).unwrap()
     }
@@ -66,17 +67,18 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     ///
     /// # fn run() -> Router<Body, Infallible> {
     /// let router = Router::builder()
-    ///      .middleware(Middleware::post(|res| async move { /* Do some operations */ Ok(res) }))
+    ///      .middleware(Middleware::post(|res| async move { /* Do some operations */ Ok::<_, Infallible>(res) }))
     ///      .build()
     ///      .unwrap();
     /// # router
     /// # }
     /// # run();
     /// ```
-    pub fn post<H, R>(handler: H) -> Middleware<B, E>
+    pub fn post<H, R, EF>(handler: H) -> Middleware<B, E>
     where
         H: FnMut(Response<B>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         Middleware::post_with_path("/*", handler).unwrap()
     }
@@ -108,10 +110,11 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     /// # }
     /// # run();
     /// ```
-    pub fn post_with_info<H, R>(handler: H) -> Middleware<B, E>
+    pub fn post_with_info<H, R, EF>(handler: H) -> Middleware<B, E>
     where
         H: FnMut(Response<B>, RequestInfo) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         Middleware::post_with_info_with_path("/*", handler).unwrap()
     }
@@ -127,18 +130,19 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     ///
     /// # fn run() -> Router<Body, Infallible> {
     /// let router = Router::builder()
-    ///      .middleware(Middleware::pre_with_path("/my-path", |req| async move { /* Do some operations */ Ok(req) }).unwrap())
+    ///      .middleware(Middleware::pre_with_path("/my-path", |req| async move { /* Do some operations */ Ok::<_, Infallible>(req) }).unwrap())
     ///      .build()
     ///      .unwrap();
     /// # router
     /// # }
     /// # run();
     /// ```
-    pub fn pre_with_path<P, H, R>(path: P, handler: H) -> crate::Result<Middleware<B, E>>
+    pub fn pre_with_path<P, H, R, EF>(path: P, handler: H) -> crate::Result<Middleware<B, E>>
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Request<hyper::Body>, E>> + Send + 'static,
+        R: Future<Output = Result<Request<hyper::Body>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         Ok(Middleware::Pre(PreMiddleware::new(path, handler)?))
     }
@@ -154,18 +158,19 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     ///
     /// # fn run() -> Router<Body, Infallible> {
     /// let router = Router::builder()
-    ///      .middleware(Middleware::post_with_path("/my-path", |res| async move { /* Do some operations */ Ok(res) }).unwrap())
+    ///      .middleware(Middleware::post_with_path("/my-path", |res| async move { /* Do some operations */ Ok::<_, Infallible>(res) }).unwrap())
     ///      .build()
     ///      .unwrap();
     /// # router
     /// # }
     /// # run();
     /// ```
-    pub fn post_with_path<P, H, R>(path: P, handler: H) -> crate::Result<Middleware<B, E>>
+    pub fn post_with_path<P, H, R, EF>(path: P, handler: H) -> crate::Result<Middleware<B, E>>
     where
         P: Into<String>,
         H: FnMut(Response<B>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         Ok(Middleware::Post(PostMiddleware::new(path, handler)?))
     }
@@ -197,11 +202,12 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     /// # }
     /// # run();
     /// ```
-    pub fn post_with_info_with_path<P, H, R>(path: P, handler: H) -> crate::Result<Middleware<B, E>>
+    pub fn post_with_info_with_path<P, H, R, EF>(path: P, handler: H) -> crate::Result<Middleware<B, E>>
     where
         P: Into<String>,
         H: FnMut(Response<B>, RequestInfo) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
         Ok(Middleware::Post(PostMiddleware::new_with_info(path, handler)?))
     }

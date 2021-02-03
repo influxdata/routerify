@@ -4,14 +4,15 @@ use routerify::prelude::RequestExt;
 use routerify::Router;
 use std::io;
 use std::sync::{Arc, Mutex};
+use std::convert::Infallible;
 
 mod support;
 
 #[tokio::test]
 async fn can_perform_simple_get_request() {
     const RESPONSE_TEXT: &str = "Hello world";
-    let router: Router<Body, routerify::Error> = Router::builder()
-        .get("/", |_| async move { Ok(Response::new(RESPONSE_TEXT.into())) })
+    let router: Router<Body, Infallible> = Router::builder()
+        .get("/", |_| async move { Ok::<_, Infallible>(Response::new(RESPONSE_TEXT.into())) })
         .build()
         .unwrap();
     let serve = serve(router).await;

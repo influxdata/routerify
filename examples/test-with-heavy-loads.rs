@@ -1,28 +1,29 @@
 use hyper::{Body, Response, Server};
 use routerify::{Middleware, Router, RouterService};
 use std::net::SocketAddr;
+use std::convert::Infallible;
 
-fn router() -> Router<Body, routerify::Error> {
+fn router() -> Router<Body, Infallible> {
     let mut builder = Router::builder();
 
     for i in 0..3000_usize {
         builder = builder.middleware(
             Middleware::pre_with_path(format!("/abc-{}", i), move |req| async move {
                 // println!("PreMiddleware: {}", format!("/abc-{}", i));
-                Ok(req)
+                Ok::<_, Infallible>(req)
             })
             .unwrap(),
         );
 
         builder = builder.get(format!("/abc-{}", i), move |_req| async move {
             // println!("Route: {}, params: {:?}", format!("/abc-{}", i), req.params());
-            Ok(Response::new(Body::from(format!("/abc-{}", i))))
+            Ok::<_, Infallible>(Response::new(Body::from(format!("/abc-{}", i))))
         });
 
         builder = builder.middleware(
             Middleware::post_with_path(format!("/abc-{}", i), move |res| async move {
                 // println!("PostMiddleware: {}", format!("/abc-{}", i));
-                Ok(res)
+                Ok::<_, Infallible>(res)
             })
             .unwrap(),
         );

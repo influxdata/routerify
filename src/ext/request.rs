@@ -22,7 +22,7 @@ pub trait RequestExt {
     ///         let user_name = params.get("userName").unwrap();
     ///         let book_name = params.get("bookName").unwrap();
     ///
-    ///         Ok(Response::new(Body::from(format!("Username: {}, Book Name: {}", user_name, book_name))))
+    ///         Ok::<_, Infallible>(Response::new(Body::from(format!("Username: {}, Book Name: {}", user_name, book_name))))
     ///      })
     ///      .build()
     ///      .unwrap();
@@ -48,7 +48,7 @@ pub trait RequestExt {
     ///         let user_name = req.param("userName").unwrap();
     ///         let book_name = req.param("bookName").unwrap();
     ///
-    ///         Ok(Response::new(Body::from(format!("Username: {}, Book Name: {}", user_name, book_name))))
+    ///         Ok::<_, Infallible>(Response::new(Body::from(format!("Username: {}, Book Name: {}", user_name, book_name))))
     ///      })
     ///      .build()
     ///      .unwrap();
@@ -73,7 +73,7 @@ pub trait RequestExt {
     ///     .get("/hello", |req| async move {
     ///         let remote_addr = req.remote_addr();
     ///
-    ///         Ok(Response::new(Body::from(format!("Hello from : {}", remote_addr))))
+    ///         Ok::<_, Infallible>(Response::new(Body::from(format!("Hello from : {}", remote_addr))))
     ///      })
     ///      .build()
     ///      .unwrap();

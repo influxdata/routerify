@@ -161,7 +161,7 @@
 //!
 //! # fn run() -> Router<Body, Infallible> {
 //! let router = Router::builder()
-//!     .get("/about", |req| async move { Ok(Response::new(Body::from("About page"))) })
+//!     .get("/about", |req| async move { Ok::<_, Infallible>(Response::new(Body::from("About page"))) })
 //!     .build()
 //!     .unwrap();
 //! # router
@@ -186,7 +186,7 @@
 //!
 //! # fn run() -> Router<Body, Infallible> {
 //! let router = Router::builder()
-//!     .get("/about", |req| async move { Ok(Response::new(Body::from("About page"))) })
+//!     .get("/about", |req| async move { Ok::<_, Infallible>(Response::new(Body::from("About page"))) })
 //!     .build()
 //!     .unwrap();
 //! # router
@@ -203,7 +203,7 @@
 //!
 //! # fn run() -> Router<Body, Infallible> {
 //! let router = Router::builder()
-//!     .get("/users/*", |req| async move { Ok(Response::new(Body::from("It will match /users/, /users/any_path"))) })
+//!     .get("/users/*", |req| async move { Ok::<_, Infallible>(Response::new(Body::from("It will match /users/, /users/any_path"))) })
 //!     .build()
 //!     .unwrap();
 //! # router
@@ -218,14 +218,14 @@
 //! ```
 //! use routerify::Router;
 //! use hyper::{Response, Body, StatusCode};
-//! # use std::convert::Infallible;
+//! use std::convert::Infallible;
 //!
 //! # fn run() -> Router<Body, Infallible> {
 //! let router = Router::builder()
-//!     .get("/users", |req| async move { Ok(Response::new(Body::from("User List"))) })
+//!     .get("/users", |req| async move { Ok::<_, Infallible>(Response::new(Body::from("User List"))) })
 //!     // It fallbacks to the following route for any non-existent routes.
 //!     .any(|_req| async move {
-//!         Ok(
+//!         Ok::<_, Infallible>(
 //!             Response::builder()
 //!             .status(StatusCode::NOT_FOUND)
 //!             .body(Body::from("NOT FOUND"))
@@ -265,7 +265,7 @@
 //!         let user_name = req.param("userName").unwrap();
 //!         let book_name = req.param("bookName").unwrap();
 //!
-//!         Ok(Response::new(Body::from(format!("Username: {}, Book Name: {}", user_name, book_name))))
+//!         Ok::<_, Infallible>(Response::new(Body::from(format!("Username: {}, Book Name: {}", user_name, book_name))))
 //!      })
 //!      .build()
 //!      .unwrap();
@@ -289,9 +289,9 @@
 //!
 //! fn api_router() -> Router<Body, Infallible> {
 //!     Router::builder()
-//!         .get("/books", |req| async move { Ok(Response::new(Body::from("List of books"))) })
+//!         .get("/books", |req| async move { Ok::<_, Infallible>(Response::new(Body::from("List of books"))) })
 //!         .get("/books/:bookId", |req| async move {
-//!             Ok(Response::new(Body::from(format!("Show book: {}", req.param("bookId").unwrap()))))
+//!             Ok::<_, Infallible>(Response::new(Body::from(format!("Show book: {}", req.param("bookId").unwrap()))))
 //!          })
 //!         .build()
 //!         .unwrap()
@@ -719,7 +719,7 @@
 //!
 //! # fn run() -> Router<Body, Infallible> {
 //! let router = Router::builder()
-//!      .get("/users", |req| async move { Ok(Response::new(Body::from("It might raise an error"))) })
+//!      .get("/users", |req| async move { Ok::<_, Infallible>(Response::new(Body::from("It might raise an error"))) })
 //!      // Here attach the custom error handler defined above.
 //!      .err_handler(error_handler)
 //!      .build()
@@ -752,7 +752,7 @@
 //!
 //! # fn run() -> Router<Body, Infallible> {
 //! let router = Router::builder()
-//!      .get("/users", |req| async move { Ok(Response::new(Body::from("It might raise an error"))) })
+//!      .get("/users", |req| async move { Ok::<_, Infallible>(Response::new(Body::from("It might raise an error"))) })
 //!      // Now register this error handler.
 //!      .err_handler_with_info(error_handler)
 //!      .build()

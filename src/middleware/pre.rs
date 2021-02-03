@@ -5,6 +5,7 @@ use regex::Regex;
 use std::fmt::{self, Debug, Formatter};
 use std::future::Future;
 use std::pin::Pin;
+use futures_util::TryFutureExt;
 
 type Handler<E> = Box<dyn FnMut(Request<hyper::Body>) -> HandlerReturn<E> + Send + Sync + 'static>;
 type HandlerReturn<E> = Box<dyn Future<Output = Result<Request<hyper::Body>, E>> + Send + 'static>;
@@ -48,20 +49,21 @@ impl<E: HandlerError> PreMiddleware<E> {
     ///
     /// # fn run() -> Router<Body, Infallible> {
     /// let router = Router::builder()
-    ///      .middleware(Middleware::Pre(PreMiddleware::new("/abc", |req| async move { /* Do some operations */ Ok(req) }).unwrap()))
+    ///      .middleware(Middleware::Pre(PreMiddleware::new("/abc", |req| async move { /* Do some operations */ Ok::<_, Infallible>(req) }).unwrap()))
     ///      .build()
     ///      .unwrap();
     /// # router
     /// # }
     /// # run();
     /// ```
-    pub fn new<P, H, R>(path: P, mut handler: H) -> crate::Result<PreMiddleware<E>>
+    pub fn new<P, H, R, EF>(path: P, mut handler: H) -> crate::Result<PreMiddleware<E>>
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Request<hyper::Body>, E>> + Send + 'static,
+        R: Future<Output = Result<Request<hyper::Body>, EF>> + Send + 'static,
+        EF: Into<E>
     {
-        let handler: Handler<E> = Box::new(move |req: Request<hyper::Body>| Box::new(handler(req)));
+        let handler: Handler<E> = Box::new(move |req: Request<hyper::Body>| Box::new(handler(req).err_into()));
         PreMiddleware::new_with_boxed_handler(path, handler)
     }
 

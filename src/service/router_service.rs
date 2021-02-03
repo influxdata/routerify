@@ -93,7 +93,7 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterService
                 constants::HEADER_NAME_X_POWERED_BY,
                 HeaderValue::from_static(constants::HEADER_VALUE_X_POWERED_BY),
             );
-            Ok(res)
+            Ok::<_, E>(res)
         })
         .unwrap();
 
@@ -124,7 +124,7 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterService
 
         if let Some(router) = Self::downcast_router_to_hyper_body_type(router) {
             let options_route: Route<hyper::Body, E> = Route::new("/*", options_method, |_req| async move {
-                Ok(Response::builder()
+                Ok::<_, E>(Response::builder()
                     .status(StatusCode::NO_CONTENT)
                     .body(hyper::Body::empty())
                     .expect("Couldn't create the default OPTIONS response"))
@@ -153,7 +153,7 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterService
         if let Some(router) = Self::downcast_router_to_hyper_body_type(router) {
             let default_404_route: Route<hyper::Body, E> =
                 Route::new("/*", constants::ALL_POSSIBLE_HTTP_METHODS.to_vec(), |_req| async move {
-                    Ok(Response::builder()
+                    Ok::<_, E>(Response::builder()
                         .status(StatusCode::NOT_FOUND)
                         .header(header::CONTENT_TYPE, "text/plain")
                         .body(hyper::Body::from(StatusCode::NOT_FOUND.canonical_reason().unwrap()))

@@ -6,6 +6,7 @@ use regex::Regex;
 use std::fmt::{self, Debug, Formatter};
 use std::future::Future;
 use std::pin::Pin;
+use futures_util::TryFutureExt;
 
 type Handler<B, E> = Box<dyn FnMut(Request<hyper::Body>) -> HandlerReturn<B, E> + Send + Sync + 'static>;
 type HandlerReturn<B, E> = Box<dyn Future<Output = Result<Response<B>, E>> + Send + 'static>;
@@ -70,13 +71,14 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError + 'static> Rou
         })
     }
 
-    pub(crate) fn new<P, H, R>(path: P, methods: Vec<Method>, mut handler: H) -> crate::Result<Route<B, E>>
+    pub(crate) fn new<P, H, R, EF>(path: P, methods: Vec<Method>, mut handler: H) -> crate::Result<Route<B, E>>
     where
         P: Into<String>,
         H: FnMut(Request<hyper::Body>) -> R + Send + Sync + 'static,
-        R: Future<Output = Result<Response<B>, E>> + Send + 'static,
+        R: Future<Output = Result<Response<B>, EF>> + Send + 'static,
+        EF: Into<E>
     {
-        let handler: Handler<B, E> = Box::new(move |req: Request<hyper::Body>| Box::new(handler(req)));
+        let handler: Handler<B, E> = Box::new(move |req: Request<hyper::Body>| Box::new(handler(req).err_into()));
         Route::new_with_boxed_handler(path, methods, handler)
     }
 
