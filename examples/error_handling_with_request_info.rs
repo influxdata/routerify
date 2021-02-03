@@ -13,9 +13,9 @@ async fn about_handler(_: Request<Body>) -> Result<Response<Body>, io::Error> {
     Ok(Response::new(Body::from("About page")))
 }
 
-// Define an error handler function which will accept the `routerify::Error` and the `req_info`
+// Define an error handler function which will accept the `routerify::RouterError` and the `req_info`
 // and generates an appropriate response.
-async fn error_handler(err: routerify::Error, req_info: RequestInfo) -> Response<Body> {
+async fn error_handler(err: routerify::RouterError<io::Error>, req_info: RequestInfo) -> Response<Body> {
     eprintln!("{}", err);
 
     // Access a cookie.

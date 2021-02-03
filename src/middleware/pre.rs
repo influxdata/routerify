@@ -1,5 +1,5 @@
 use crate::regex_generator::generate_exact_match_regex;
-use crate::Error;
+use crate::HandlerError;
 use hyper::Request;
 use regex::Regex;
 use std::fmt::{self, Debug, Formatter};
@@ -14,7 +14,7 @@ type HandlerReturn<E> = Box<dyn Future<Output = Result<Request<hyper::Body>, E>>
 /// This `PreMiddleware<E>` type accepts a single type parameter: `E`.
 ///
 /// * The `E` represents any error type which will be used by route handlers and the middlewares. This error type must implement the [std::error::Error](https://doc.rust-lang.org/std/error/trait.Error.html).
-pub struct PreMiddleware<E> {
+pub struct PreMiddleware<E: HandlerError + 'static> {
     pub(crate) path: String,
     pub(crate) regex: Regex,
     // Make it an option so that when a router is used to scope in another router,
@@ -22,7 +22,7 @@ pub struct PreMiddleware<E> {
     pub(crate) handler: Option<Handler<E>>,
 }
 
-impl<E: std::error::Error + Send + Sync + Unpin + 'static> PreMiddleware<E> {
+impl<E: HandlerError> PreMiddleware<E> {
     pub(crate) fn new_with_boxed_handler<P: Into<String>>(
         path: P,
         handler: Handler<E>,
@@ -65,19 +65,17 @@ impl<E: std::error::Error + Send + Sync + Unpin + 'static> PreMiddleware<E> {
         PreMiddleware::new_with_boxed_handler(path, handler)
     }
 
-    pub(crate) async fn process(&mut self, req: Request<hyper::Body>) -> crate::Result<Request<hyper::Body>> {
+    pub(crate) async fn process(&mut self, req: Request<hyper::Body>) -> Result<Request<hyper::Body>, E> {
         let handler = self
             .handler
             .as_mut()
             .expect("A router can not be used after mounting into another router");
 
-        Pin::from(handler(req))
-            .await
-            .map_err(|e| Error::HandlePreMiddlewareRequest(e.into()))
+        Pin::from(handler(req)).await
     }
 }
 
-impl<E> Debug for PreMiddleware<E> {
+impl<E: HandlerError> Debug for PreMiddleware<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{{ path: {:?}, regex: {:?} }}", self.path, self.regex)
     }

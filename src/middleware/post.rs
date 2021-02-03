@@ -1,6 +1,6 @@
 use crate::regex_generator::generate_exact_match_regex;
 use crate::types::RequestInfo;
-use crate::Error;
+use crate::HandlerError;
 use hyper::{body::HttpBody, Response};
 use regex::Regex;
 use std::fmt::{self, Debug, Formatter};
@@ -129,30 +129,22 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
         }
     }
 
-    pub(crate) async fn process(
-        &mut self,
-        res: Response<B>,
-        req_info: Option<RequestInfo>,
-    ) -> crate::Result<Response<B>> {
+    pub(crate) async fn process(&mut self, res: Response<B>, req_info: Option<RequestInfo>) -> Result<Response<B>, E> {
         let handler = self
             .handler
             .as_mut()
             .expect("A router can not be used after mounting into another router");
 
         match handler {
-            Handler::WithoutInfo(ref mut handler) => Pin::from(handler(res))
-                .await
-                .map_err(|e| Error::HandlePostMiddlewareWithoutInfoRequest(e.into())),
+            Handler::WithoutInfo(ref mut handler) => Pin::from(handler(res)).await,
             Handler::WithInfo(ref mut handler) => {
-                Pin::from(handler(res, req_info.expect("No RequestInfo is provided")))
-                    .await
-                    .map_err(|e| Error::HandlePostMiddlewareWithInfoRequest(e.into()))
+                Pin::from(handler(res, req_info.expect("No RequestInfo is provided"))).await
             }
         }
     }
 }
 
-impl<B, E> Debug for PostMiddleware<B, E> {
+impl<B, E: HandlerError> Debug for PostMiddleware<B, E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{{ path: {:?}, regex: {:?} }}", self.path, self.regex)
     }

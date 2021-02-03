@@ -5,7 +5,13 @@ use std::net::SocketAddr;
 
 pub struct State(pub i32);
 
-pub async fn pre_middleware(req: Request<Body>) -> Result<Request<Body>, routerify::Error> {
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("Test")]
+    Test,
+}
+
+pub async fn pre_middleware(req: Request<Body>) -> Result<Request<Body>, Error> {
     let data = req.data::<State>().map(|s| s.0).unwrap_or(0);
     println!("Pre Data: {}", data);
     println!("Pre Data2: {:?}", req.data::<u32>());
@@ -13,25 +19,22 @@ pub async fn pre_middleware(req: Request<Body>) -> Result<Request<Body>, routeri
     Ok(req)
 }
 
-pub async fn post_middleware(res: Response<Body>, req_info: RequestInfo) -> Result<Response<Body>, routerify::Error> {
+pub async fn post_middleware(res: Response<Body>, req_info: RequestInfo) -> Result<Response<Body>, Error> {
     let data = req_info.data::<State>().map(|s| s.0).unwrap_or(0);
     println!("Post Data: {}", data);
 
     Ok(res)
 }
 
-pub async fn home_handler(req: Request<Body>) -> Result<Response<Body>, routerify::Error> {
+pub async fn home_handler(req: Request<Body>) -> Result<Response<Body>, Error> {
     let data = req.data::<State>().map(|s| s.0).unwrap_or(0);
     println!("Route Data: {}", data);
     println!("Route Data2: {:?}", req.data::<u32>());
 
-    Err(routerify::Error::HandleRequest(
-        "Error".into(),
-        "/some/fake/path".into(),
-    ))
+    Err(Error::Test)
 }
 
-async fn error_handler(err: routerify::Error, req_info: RequestInfo) -> Response<Body> {
+async fn error_handler(err: routerify::RouterError<Error>, req_info: RequestInfo) -> Response<Body> {
     let data = req_info.data::<State>().map(|s| s.0).unwrap_or(0);
     println!("Error Data: {}", data);
     println!("Error Data2: {:?}", req_info.data::<u32>());
@@ -43,7 +46,7 @@ async fn error_handler(err: routerify::Error, req_info: RequestInfo) -> Response
         .unwrap()
 }
 
-fn router2() -> Router<Body, routerify::Error> {
+fn router2() -> Router<Body, Error> {
     Router::builder()
         .data(111_u32)
         .get("/a", |req| async move {
@@ -56,7 +59,7 @@ fn router2() -> Router<Body, routerify::Error> {
         .unwrap()
 }
 
-fn router3() -> Router<Body, routerify::Error> {
+fn router3() -> Router<Body, Error> {
     Router::builder()
         .data(555_u32)
         .get("/h/g/j", |req| async move {
@@ -71,7 +74,7 @@ fn router3() -> Router<Body, routerify::Error> {
 
 #[tokio::main]
 async fn main() {
-    let router: Router<Body, routerify::Error> = Router::builder()
+    let router: Router<Body, Error> = Router::builder()
         .data(State(100))
         .scope("/r", router2())
         .scope("/bcd", router3())

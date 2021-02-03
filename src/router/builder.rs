@@ -1,10 +1,10 @@
-use crate::constants;
 use crate::data_map::{DataMap, ScopedDataMap};
 use crate::middleware::{Middleware, PostMiddleware, PreMiddleware};
 use crate::route::Route;
 use crate::router::Router;
 use crate::router::{ErrHandler, ErrHandlerWithInfo, ErrHandlerWithoutInfo};
 use crate::types::RequestInfo;
+use crate::{constants, HandlerError, RouterError};
 use hyper::{body::HttpBody, Method, Request, Response};
 use std::collections::HashMap;
 use std::future::Future;
@@ -50,21 +50,19 @@ use std::sync::Arc;
 /// # }
 /// # run();
 /// ```
-pub struct RouterBuilder<B, E> {
+pub struct RouterBuilder<B, E: HandlerError + 'static> {
     inner: crate::Result<BuilderInner<B, E>>,
 }
 
-struct BuilderInner<B, E> {
+struct BuilderInner<B, E: HandlerError + 'static> {
     pre_middlewares: Vec<PreMiddleware<E>>,
     routes: Vec<Route<B, E>>,
     post_middlewares: Vec<PostMiddleware<B, E>>,
     data_maps: HashMap<String, Vec<DataMap>>,
-    err_handler: Option<ErrHandler<B>>,
+    err_handler: Option<ErrHandler<B, E>>,
 }
 
-impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + Sync + Unpin + 'static>
-    RouterBuilder<B, E>
-{
+impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder<B, E> {
     /// Creates a new `RouterBuilder` instance with default options.
     pub fn new() -> RouterBuilder<B, E> {
         RouterBuilder::default()
@@ -105,9 +103,7 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     }
 }
 
-impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + Sync + Unpin + 'static>
-    RouterBuilder<B, E>
-{
+impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder<B, E> {
     /// Adds a new route with `GET` method and the handler at the specified path.
     ///
     /// # Examples
@@ -633,9 +629,7 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     }
 }
 
-impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + Sync + Unpin + 'static>
-    RouterBuilder<B, E>
-{
+impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> RouterBuilder<B, E> {
     /// Adds a single middleware. A pre middleware can be created by [`Middleware::pre`](./enum.Middleware.html#method.pre) method and a post
     /// middleware can be created by [`Middleware::post`](./enum.Middleware.html#method.post) method.
     ///
@@ -697,10 +691,10 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     /// for more info.
     pub fn err_handler<H, R>(self, mut handler: H) -> Self
     where
-        H: FnMut(crate::Error) -> R + Send + Sync + 'static,
+        H: FnMut(RouterError<E>) -> R + Send + Sync + 'static,
         R: Future<Output = Response<B>> + Send + 'static,
     {
-        let handler: ErrHandlerWithoutInfo<B> = Box::new(move |err: crate::Error| Box::new(handler(err)));
+        let handler: ErrHandlerWithoutInfo<B, E> = Box::new(move |err: RouterError<E>| Box::new(handler(err)));
 
         self.and_then(move |mut inner| {
             inner.err_handler = Some(ErrHandler::WithoutInfo(handler));
@@ -716,11 +710,11 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     /// for more info.
     pub fn err_handler_with_info<H, R>(self, mut handler: H) -> Self
     where
-        H: FnMut(crate::Error, RequestInfo) -> R + Send + Sync + 'static,
+        H: FnMut(RouterError<E>, RequestInfo) -> R + Send + Sync + 'static,
         R: Future<Output = Response<B>> + Send + 'static,
     {
-        let handler: ErrHandlerWithInfo<B> =
-            Box::new(move |err: crate::Error, req_info: RequestInfo| Box::new(handler(err, req_info)));
+        let handler: ErrHandlerWithInfo<B, E> =
+            Box::new(move |err: RouterError<E>, req_info: RequestInfo| Box::new(handler(err, req_info)));
 
         self.and_then(move |mut inner| {
             inner.err_handler = Some(ErrHandler::WithInfo(handler));
@@ -729,9 +723,7 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     }
 }
 
-impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + Sync + Unpin + 'static> Default
-    for RouterBuilder<B, E>
-{
+impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> Default for RouterBuilder<B, E> {
     fn default() -> RouterBuilder<B, E> {
         RouterBuilder {
             inner: Ok(BuilderInner {

@@ -2,7 +2,7 @@ use crate::data_map::ScopedDataMap;
 use crate::middleware::{PostMiddleware, PreMiddleware};
 use crate::route::Route;
 use crate::types::RequestInfo;
-use crate::Error;
+use crate::{Error, HandlerError, RouterError};
 use hyper::{body::HttpBody, Request, Response};
 use regex::RegexSet;
 use std::fmt::{self, Debug, Formatter};
@@ -13,12 +13,12 @@ pub use self::builder::RouterBuilder;
 
 mod builder;
 
-pub(crate) type ErrHandlerWithoutInfo<B> =
-    Box<dyn FnMut(crate::Error) -> ErrHandlerWithoutInfoReturn<B> + Send + Sync + 'static>;
+pub(crate) type ErrHandlerWithoutInfo<B, E> =
+    Box<dyn FnMut(RouterError<E>) -> ErrHandlerWithoutInfoReturn<B> + Send + Sync + 'static>;
 pub(crate) type ErrHandlerWithoutInfoReturn<B> = Box<dyn Future<Output = Response<B>> + Send + 'static>;
 
-pub(crate) type ErrHandlerWithInfo<B> =
-    Box<dyn FnMut(crate::Error, RequestInfo) -> ErrHandlerWithInfoReturn<B> + Send + Sync + 'static>;
+pub(crate) type ErrHandlerWithInfo<B, E> =
+    Box<dyn FnMut(RouterError<E>, RequestInfo) -> ErrHandlerWithInfoReturn<B> + Send + Sync + 'static>;
 pub(crate) type ErrHandlerWithInfoReturn<B> = Box<dyn Future<Output = Response<B>> + Send + 'static>;
 
 /// Represents a modular, lightweight and mountable router type.
@@ -56,7 +56,7 @@ pub(crate) type ErrHandlerWithInfoReturn<B> = Box<dyn Future<Output = Response<B
 /// # }
 /// # run();
 /// ```
-pub struct Router<B, E> {
+pub struct Router<B, E: HandlerError + 'static> {
     pub(crate) pre_middlewares: Vec<PreMiddleware<E>>,
     pub(crate) routes: Vec<Route<B, E>>,
     pub(crate) post_middlewares: Vec<PostMiddleware<B, E>>,
@@ -64,7 +64,7 @@ pub struct Router<B, E> {
 
     // This handler should be added only on root Router.
     // Any error handler attached to scoped router will be ignored.
-    pub(crate) err_handler: Option<ErrHandler<B>>,
+    pub(crate) err_handler: Option<ErrHandler<B, E>>,
 
     // We'll initialize it from the RouterService via Router::init_regex_set() method.
     regex_set: Option<RegexSet>,
@@ -73,13 +73,13 @@ pub struct Router<B, E> {
     pub(crate) should_gen_req_info: Option<bool>,
 }
 
-pub(crate) enum ErrHandler<B> {
-    WithoutInfo(ErrHandlerWithoutInfo<B>),
-    WithInfo(ErrHandlerWithInfo<B>),
+pub(crate) enum ErrHandler<B, E: HandlerError + 'static> {
+    WithoutInfo(ErrHandlerWithoutInfo<B, E>),
+    WithInfo(ErrHandlerWithInfo<B, E>),
 }
 
-impl<B: HttpBody + Send + Sync + Unpin + 'static> ErrHandler<B> {
-    pub(crate) async fn execute(&mut self, err: crate::Error, req_info: Option<RequestInfo>) -> Response<B> {
+impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> ErrHandler<B, E> {
+    pub(crate) async fn execute(&mut self, err: RouterError<E>, req_info: Option<RequestInfo>) -> Response<B> {
         match self {
             ErrHandler::WithoutInfo(ref mut err_handler) => Pin::from(err_handler(err)).await,
             ErrHandler::WithInfo(ref mut err_handler) => {
@@ -89,13 +89,13 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static> ErrHandler<B> {
     }
 }
 
-impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + Sync + Unpin + 'static> Router<B, E> {
+impl<B: HttpBody + Send + Sync + Unpin + 'static, E: HandlerError> Router<B, E> {
     pub(crate) fn new(
         pre_middlewares: Vec<PreMiddleware<E>>,
         routes: Vec<Route<B, E>>,
         post_middlewares: Vec<PostMiddleware<B, E>>,
         scoped_data_maps: Vec<ScopedDataMap>,
-        err_handler: Option<ErrHandler<B>>,
+        err_handler: Option<ErrHandler<B, E>>,
     ) -> Self {
         Router {
             pre_middlewares,
@@ -152,7 +152,7 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
         target_path: &str,
         mut req: Request<hyper::Body>,
         mut req_info: Option<RequestInfo>,
-    ) -> crate::Result<Response<B>> {
+    ) -> Result<Response<B>, RouterError<E>> {
         let (
             matched_pre_middleware_idxs,
             matched_route_idxs,
@@ -178,7 +178,10 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
         for idx in matched_pre_middleware_idxs {
             let pre_middleware = &mut self.pre_middlewares[idx];
 
-            transformed_req = pre_middleware.process(transformed_req).await?;
+            transformed_req = pre_middleware
+                .process(transformed_req)
+                .await
+                .map_err(|e| RouterError::HandlePreMiddlewareRequest(e))?;
         }
 
         let mut resp = None;
@@ -186,7 +189,10 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
             let route = &mut self.routes[idx];
 
             if route.is_match_method(transformed_req.method()) {
-                let route_resp_res = route.process(target_path, transformed_req).await;
+                let route_resp_res = route
+                    .process(target_path, transformed_req)
+                    .await
+                    .map_err(|e| RouterError::HandleRequest(e, target_path.into()));
 
                 let route_resp = match route_resp_res {
                     Ok(route_resp) => route_resp,
@@ -205,13 +211,23 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
         }
 
         if resp.is_none() {
-            return Err(Error::HandleNonExistentRoute);
+            return Err(RouterError::HandleNonExistentRoute);
         }
 
         let mut transformed_res = resp.unwrap();
         for idx in matched_post_middleware_idxs {
             let post_middleware = &mut self.post_middlewares[idx];
-            transformed_res = post_middleware.process(transformed_res, req_info.clone()).await?;
+            let with_info = post_middleware.should_require_req_meta();
+            transformed_res = post_middleware
+                .process(transformed_res, req_info.clone())
+                .await
+                .map_err(|e| {
+                    if with_info {
+                        RouterError::HandlePostMiddlewareWithInfoRequest(e)
+                    } else {
+                        RouterError::HandlePostMiddlewareWithoutInfoRequest(e)
+                    }
+                })?;
         }
 
         Ok(transformed_res)
@@ -260,7 +276,7 @@ impl<B: HttpBody + Send + Sync + Unpin + 'static, E: std::error::Error + Send + 
     }
 }
 
-impl<B, E> Debug for Router<B, E> {
+impl<B, E: HandlerError> Debug for Router<B, E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,

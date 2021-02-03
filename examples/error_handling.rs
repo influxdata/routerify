@@ -23,9 +23,9 @@ fn format_cause_chain(err: impl std::error::Error) -> String {
     lines.join("\n")
 }
 
-// Define an error handler function which will accept the `routerify::Error`
+// Define an error handler function which will accept the `routerify::RouterError`
 // and generates an appropriate response.
-async fn error_handler(err: routerify::Error) -> Response<Body> {
+async fn error_handler(err: routerify::RouterError<io::Error>) -> Response<Body> {
     Response::builder()
         .status(StatusCode::INTERNAL_SERVER_ERROR)
         .body(Body::from(format_cause_chain(err)))

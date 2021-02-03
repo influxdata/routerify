@@ -27,9 +27,9 @@ async fn logger(req: Request<Body>) -> Result<Request<Body>, Infallible> {
     Ok(req)
 }
 
-// Define an error handler function which will accept the `routerify::Error`
+// Define an error handler function which will accept the `routerify::RouterError`
 // and the request information and generates an appropriate response.
-async fn error_handler(err: routerify::Error, req_info: RequestInfo) -> Response<Body> {
+async fn error_handler(err: routerify::RouterError<Infallible>, req_info: RequestInfo) -> Response<Body> {
     // You can also access the same state from error handler.
     let state = req_info.data::<State>().unwrap();
     println!("State value: {}", state.0);
