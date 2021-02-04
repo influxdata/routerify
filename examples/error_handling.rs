@@ -1,16 +1,52 @@
 use hyper::{Body, Request, Response, Server, StatusCode};
 use routerify::{Router, RouterService};
-use std::io;
 use std::net::SocketAddr;
 
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("Home Error")]
+    HomeError,
+    #[error("API Error")]
+    ApiError(#[source] api::Error)
+}
+
+impl From<api::Error> for Error {
+    fn from(e: api::Error) -> Self {
+        Self::ApiError(e)
+    }
+}
+
 // A handler for "/" page.
-async fn home_handler(_: Request<Body>) -> Result<Response<Body>, io::Error> {
-    Err(io::Error::new(io::ErrorKind::Other, "Some errors"))
+async fn home_handler(_: Request<Body>) -> Result<Response<Body>, Error> {
+    Err(Error::HomeError)
 }
 
 // A handler for "/about" page.
-async fn about_handler(_: Request<Body>) -> Result<Response<Body>, io::Error> {
+async fn about_handler(_: Request<Body>) -> Result<Response<Body>, Error> {
     Ok(Response::new(Body::from("About page")))
+}
+
+mod api {
+    use super::*;
+
+    #[derive(thiserror::Error, Debug)]
+    pub enum Error {
+        #[error("Test Error")]
+        Test,
+    }
+
+    // A handler for "/fail" page
+    async fn fail_handler(_: Request<Body>) -> Result<Response<Body>, Error> {
+        Err(Error::Test)
+    }
+
+    pub fn router() -> Router<Body, super::Error> {
+        // Create a router for API and specify the the handlers.
+        Router::builder()
+            .get("/fail", fail_handler)
+            .build()
+            .unwrap()
+    }
 }
 
 fn format_cause_chain(err: impl std::error::Error) -> String {
@@ -25,18 +61,21 @@ fn format_cause_chain(err: impl std::error::Error) -> String {
 
 // Define an error handler function which will accept the `routerify::RouterError`
 // and generates an appropriate response.
-async fn error_handler(err: routerify::RouterError<io::Error>) -> Response<Body> {
+async fn error_handler(err: routerify::RouterError<Error>) -> Response<Body> {
     Response::builder()
         .status(StatusCode::INTERNAL_SERVER_ERROR)
         .body(Body::from(format_cause_chain(err)))
         .unwrap()
 }
 
-fn router() -> Router<Body, io::Error> {
+fn router() -> Router<Body, Error> {
     // Create a router and specify the the handlers.
     Router::builder()
         .get("/", home_handler)
         .get("/about", about_handler)
+        // Mount the api router at `/api` path.
+        // Now the app can handle: `/api/fail` path.
+        .scope("/api", api::router())
         // Specify the error handler to handle any errors caused by
         // a route or any middleware.
         .err_handler(error_handler)
