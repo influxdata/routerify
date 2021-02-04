@@ -78,7 +78,7 @@
 //!
 //! // Define an error handler function which will accept the `routerify::Error`
 //! // and the request information and generates an appropriate response.
-//! async fn error_handler(err: routerify::Error, _: RequestInfo) -> Response<Body> {
+//! async fn error_handler(err: routerify::RouterError<Infallible>, _: RequestInfo) -> Response<Body> {
 //!     eprintln!("{}", err);
 //!     Response::builder()
 //!         .status(StatusCode::INTERNAL_SERVER_ERROR)
@@ -525,7 +525,7 @@
 //!
 //! // Define an error handler function which will accept the `routerify::Error`
 //! // and the request information and generates an appropriate response.
-//! async fn error_handler(err: routerify::Error, req_info: RequestInfo) -> Response<Body> {
+//! async fn error_handler(err: routerify::RouterError<Infallible>, req_info: RequestInfo) -> Response<Body> {
 //!     // You can also access the same state from error handler.
 //!     let state = req_info.data::<State>().unwrap();
 //!     println!("State value: {}", state.0);
@@ -706,17 +706,18 @@
 //! use routerify::{Router, Middleware};
 //! use routerify::prelude::*;
 //! use hyper::{Response, Body, StatusCode};
+//! use std::convert::Infallible;
 //!
 //! // The error handler will accept the thrown error in routerify::Error type and
 //! // it will have to generate a response based on the error.
-//! async fn error_handler(err: routerify::Error) -> Response<Body> {
+//! async fn error_handler(err: routerify::RouterError<Infallible>) -> Response<Body> {
 //!     Response::builder()
 //!       .status(StatusCode::INTERNAL_SERVER_ERROR)
 //!       .body(Body::from("Something went wrong"))
 //!       .unwrap()
 //! }
 //!
-//! # fn run() -> Router<Body, hyper::Error> {
+//! # fn run() -> Router<Body, Infallible> {
 //! let router = Router::builder()
 //!      .get("/users", |req| async move { Ok(Response::new(Body::from("It might raise an error"))) })
 //!      // Here attach the custom error handler defined above.
@@ -737,10 +738,11 @@
 //! use routerify::{Router, Middleware, RequestInfo};
 //! use routerify::prelude::*;
 //! use hyper::{Response, Body, StatusCode};
+//! use std::convert::Infallible;
 //!
 //! // The error handler will accept the thrown error and the request info and
 //! // it will generate a response.
-//! async fn error_handler(err: routerify::Error, req_info: RequestInfo) -> Response<Body> {
+//! async fn error_handler(err: routerify::RouterError<Infallible>, req_info: RequestInfo) -> Response<Body> {
 //!     // Now generate response based on the `err` and the `req_info`.
 //!     Response::builder()
 //!       .status(StatusCode::INTERNAL_SERVER_ERROR)
@@ -748,7 +750,7 @@
 //!       .unwrap()
 //! }
 //!
-//! # fn run() -> Router<Body, hyper::Error> {
+//! # fn run() -> Router<Body, Infallible> {
 //! let router = Router::builder()
 //!      .get("/users", |req| async move { Ok(Response::new(Body::from("It might raise an error"))) })
 //!      // Now register this error handler.
@@ -760,7 +762,7 @@
 //! # run();
 //! ```
 
-pub use self::error::Error;
+pub use self::error::{Error, HandlerError, RouterError};
 pub use self::middleware::{Middleware, PostMiddleware, PreMiddleware};
 pub use self::route::Route;
 pub use self::router::{Router, RouterBuilder};

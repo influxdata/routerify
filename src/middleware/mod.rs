@@ -4,6 +4,7 @@ use std::future::Future;
 
 pub use self::post::PostMiddleware;
 pub use self::pre::PreMiddleware;
+use crate::HandlerError;
 
 mod post;
 mod pre;
@@ -17,7 +18,7 @@ mod pre;
 ///   type.
 /// * The `E` represents any error type which will be used by route handlers and the middlewares. This error type must implement the [std::error::Error](https://doc.rust-lang.org/std/error/trait.Error.html).
 #[derive(Debug)]
-pub enum Middleware<B, E> {
+pub enum Middleware<B, E: HandlerError + 'static> {
     /// Variant for the pre middleware. Refer to [Pre Middleware](./index.html#pre-middleware) for more info.
     Pre(PreMiddleware<E>),
 
